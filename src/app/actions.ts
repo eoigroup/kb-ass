@@ -1,4 +1,4 @@
-// Updated: 2025-01-08 16:45:00 - Fixed Pinecone Assistant integration using Chat Completions API
+// Updated: 2025-01-08 17:45:00 - Modified to send metadata separately for showcase panel
 
 'use server'
 
@@ -9,7 +9,7 @@ type Message = {
   content: string;
 }
 
-export async function chat(messages: Message[]) {
+export async function chat(messages: Message[], showCitationsInChat = false) {
   // Create an initial stream, which we'll populate with events from the Pinecone Assistant API
   const stream = createStreamableValue()
 
@@ -57,41 +57,35 @@ export async function chat(messages: Message[]) {
     const citations = data.citations || [];
     
     if (content) {
-      // Build the complete response with metadata
-      let fullResponse = content;
+      let finalContent = content;
       
-      // Add model and usage information
-      if (model || usage) {
-        fullResponse += "\n\n---\n**Response Metadata:**\n";
-        if (model) {
-          fullResponse += `- **Model**: ${model}\n`;
-        }
-        if (usage) {
-          fullResponse += `- **Token Usage**: ${usage.total_tokens} total (${usage.prompt_tokens} prompt + ${usage.completion_tokens} completion)\n`;
-        }
-      }
-      
-      // Add citations if available
-      if (citations && citations.length > 0) {
-        fullResponse += "\n**Sources & Citations:**\n";
-        citations.forEach((citation, index) => {
-          citation.references?.forEach((ref, refIndex) => {
+      // Add citations to the chat response if enabled
+      if (showCitationsInChat && citations && citations.length > 0) {
+        finalContent += "\n\n**Sources & Citations:**\n";
+        citations.forEach((citation: any, index: number) => {
+          citation.references?.forEach((ref: any, refIndex: number) => {
             const citationNumber = index + 1;
-            fullResponse += `${citationNumber}. **${ref.file.name}** (Pages: ${ref.pages?.join(', ') || 'N/A'})\n`;
+            finalContent += `${citationNumber}. **${ref.file.name}** (Pages: ${ref.pages?.join(', ') || 'N/A'})\n`;
             if (ref.file.signed_url) {
-              fullResponse += `   - [View Document](${ref.file.signed_url})\n`;
+              finalContent += `   - [View Document](${ref.file.signed_url})\n`;
             }
           });
         });
       }
       
-      // Send the complete response as a single chunk
+      // Send content and metadata separately so UI can decide what to show
       const streamChunk = {
         choices: [{
           delta: {
-            content: fullResponse
+            content: finalContent
           }
-        }]
+        }],
+        // Include metadata for the showcase panel
+        metadata: {
+          model,
+          usage,
+          citations
+        }
       };
       stream.update(JSON.stringify(streamChunk));
     }
@@ -100,7 +94,8 @@ export async function chat(messages: Message[]) {
 
   } catch (error) {
     console.error('Error in chat function:', error);
-    stream.update(`Error: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    stream.update(`Error: ${errorMessage}`);
     stream.done();
   }
 
