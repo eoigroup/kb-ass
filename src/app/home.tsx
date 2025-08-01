@@ -1,6 +1,6 @@
 'use client';
 
-// Updated: 2025-01-08 18:15:00 - Added debug mode URL parameter to conditionally show model information
+// Updated: 2025-01-08 18:30:00 - Added Truth Engine section with relevance scores detection and display
 
 import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
 import { readStreamableValue } from 'ai/rsc';
@@ -37,6 +37,7 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
     model?: string;
     usage?: { total_tokens: number; prompt_tokens: number; completion_tokens: number };
     citations?: any[];
+    scores?: any;
   }>({});
   const [showDebugMode, setShowDebugMode] = useState(false);
 
@@ -161,7 +162,8 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
             setCurrentResponseMeta({
               model: metadata.model,
               usage: metadata.usage,
-              citations: metadata.citations
+              citations: metadata.citations,
+              scores: metadata.scores
             });
           }
           
@@ -549,6 +551,39 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
                         </div>
                       ) : (
                         <p className="text-sm text-gray-500 dark:text-gray-400">No usage data yet</p>
+                      )}
+                    </div>
+
+                    {/* Truth Engine - Scores */}
+                    <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                        <svg className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Truth Engine
+                      </h3>
+                      {currentResponseMeta.scores ? (
+                        <div className="space-y-2">
+                          {typeof currentResponseMeta.scores === 'object' ? (
+                            Object.entries(currentResponseMeta.scores).map(([key, value]: [string, any]) => (
+                              <div key={key} className="flex justify-between text-sm">
+                                <span className="text-gray-600 dark:text-gray-400 capitalize">{key.replace('_', ' ')}:</span>
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {typeof value === 'number' ? value.toFixed(3) : value}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600 dark:text-gray-400">Relevance Score:</span>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {typeof currentResponseMeta.scores === 'number' ? currentResponseMeta.scores.toFixed(3) : currentResponseMeta.scores}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No scoring data available</p>
                       )}
                     </div>
 

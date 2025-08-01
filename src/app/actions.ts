@@ -1,4 +1,4 @@
-// Updated: 2025-01-08 17:45:00 - Modified to send metadata separately for showcase panel
+// Updated: 2025-01-08 18:35:00 - Added comprehensive score detection and logging to debug missing scores
 
 'use server'
 
@@ -50,11 +50,62 @@ export async function chat(messages: Message[], showCitationsInChat = false) {
     const data = await response.json();
     console.log('Response data:', JSON.stringify(data, null, 2));
     
+    // Debug: Check for all possible score fields
+    console.log('Checking for scores in response:');
+    console.log('data.scores:', data.scores);
+    console.log('data.relevance_scores:', data.relevance_scores);
+    console.log('data.snippet_scores:', data.snippet_scores);
+    console.log('data.confidence:', data.confidence);
+    console.log('data.metadata:', data.metadata);
+    console.log('Citations with potential scores:', data.citations?.map((c: any) => ({
+      score: c.score,
+      confidence: c.confidence,
+      relevance: c.relevance,
+      references: c.references?.map((r: any) => ({
+        score: r.score,
+        confidence: r.confidence,
+        relevance: r.relevance
+      }))
+    })));
+    
     //  Assistant returns data.message.content, not data.choices[0].message.content
     const content = data.message?.content;
     const model = data.model;
     const usage = data.usage;
     const citations = data.citations || [];
+    
+    // Look for scores in multiple possible locations
+    let scores = null;
+    if (data.scores) {
+      scores = data.scores;
+    } else if (data.relevance_scores) {
+      scores = data.relevance_scores;
+    } else if (data.confidence) {
+      scores = { confidence: data.confidence };
+    } else if (data.citations && data.citations.length > 0) {
+      // Check if citations have scores
+      const citationScores: any = {};
+      data.citations.forEach((citation: any, index: number) => {
+        if (citation.score !== undefined) {
+          citationScores[`citation_${index + 1}_score`] = citation.score;
+        }
+        if (citation.confidence !== undefined) {
+          citationScores[`citation_${index + 1}_confidence`] = citation.confidence;
+        }
+        if (citation.references) {
+          citation.references.forEach((ref: any, refIndex: number) => {
+            if (ref.score !== undefined) {
+              citationScores[`citation_${index + 1}_ref_${refIndex + 1}_score`] = ref.score;
+            }
+          });
+        }
+      });
+      if (Object.keys(citationScores).length > 0) {
+        scores = citationScores;
+      }
+    }
+    
+    console.log('Final extracted scores:', scores);
     
     if (content) {
       let finalContent = content;
@@ -84,7 +135,8 @@ export async function chat(messages: Message[], showCitationsInChat = false) {
         metadata: {
           model,
           usage,
-          citations
+          citations,
+          scores
         }
       };
       stream.update(JSON.stringify(streamChunk));
