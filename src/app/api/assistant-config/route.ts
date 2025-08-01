@@ -9,7 +9,7 @@ export async function GET() {
   if (!apiKey || !assistantName) {
     return NextResponse.json({
       status: "error",
-      message: "PINECONE_API_KEY and PINECONE_ASSISTANT_NAME are required.",
+      message: "API_KEY and ASSISTANT_NAME are required.",
       config: null
     }, { status: 400 });
   }

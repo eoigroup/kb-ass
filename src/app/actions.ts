@@ -50,7 +50,7 @@ export async function chat(messages: Message[], showCitationsInChat = false) {
     const data = await response.json();
     console.log('Response data:', JSON.stringify(data, null, 2));
     
-    // Pinecone Assistant returns data.message.content, not data.choices[0].message.content
+    //  Assistant returns data.message.content, not data.choices[0].message.content
     const content = data.message?.content;
     const model = data.model;
     const usage = data.usage;

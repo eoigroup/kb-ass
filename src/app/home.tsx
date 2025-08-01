@@ -198,8 +198,8 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
               <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600"></div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <Image
-                  src="/pinecone-logo.png"
-                  alt="Pinecone"
+                  src=""
+                  alt="LB"
                   width={20}
                   height={20}
                   className="opacity-60"
@@ -215,8 +215,8 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
           <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Image
-                src="/pinecone-logo.png"
-                alt="Pinecone Assistant"
+                src="/brain-logo.png"
+                alt="LB Assistant"
                 width={32}
                 height={32}
                 className="rounded-lg"
@@ -276,7 +276,7 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
                         ) : (
                             <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                             <Image
-                              src="/pinecone-logo.png"
+                              src="/brain-logo.png"
                                 alt="Assistant"
                                 width={20}
                                 height={20}
@@ -332,7 +332,7 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
                       <div className="flex-shrink-0 mr-3">
                         <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                           <Image
-                            src="/pinecone-logo.png"
+                            src="/brain-logo.png"
                             alt="Assistant"
                             width={20}
                             height={20}
@@ -612,7 +612,7 @@ export default function Home({ initialShowAssistantFiles, showCitations, showMod
                 <ol className="list-decimal list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
                   <li>Check your environment variables</li>
                   <li>Restart the application</li>
-                  <li>Verify your Pinecone Assistant configuration</li>
+                  <li>Verify your configuration</li>
             </ol>
               </div>
             </div>
