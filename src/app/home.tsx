@@ -242,7 +242,7 @@ export default function Home({ initialShowAssistantFiles, isAssistantAvailable }
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <Image 
-                    src="/pinecone-logo.png" 
+                    src="/brain-logo.png" 
                     alt="LB Persona" 
                     width={32} 
                     height={32}
