@@ -12,7 +12,7 @@ export interface File {
     name: string;
     url?: string;
   }
-
+  
   export interface Message {
     id: string;
     content: string;
