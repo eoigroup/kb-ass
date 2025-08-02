@@ -3,6 +3,7 @@ export interface File {
     name: string;
     size: number;
     created_at: string;
+    metadata?: any;
   }
  
   // A 'Reference' is a file that the Assistant has access to and used 

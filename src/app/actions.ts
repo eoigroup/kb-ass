@@ -1,15 +1,38 @@
-// Updated: 2025-01-08 18:35:00 - Added comprehensive score detection and logging to debug missing scores
+// Updated: 2025-01-08 19:00:00 - Added complete advanced features: metadata filtering, context controls, temperature, highlights, auto-categorization
 
 'use server'
 
 import { createStreamableValue } from 'ai/rsc'
+import { evaluateAnswer, getContextSnippets, EvaluationResponse } from './utils/evaluationUtils'
 
 type Message = {
   role: string;
   content: string;
 }
 
-export async function chat(messages: Message[], showCitationsInChat = false) {
+export async function chat(
+  messages: Message[], 
+  showCitationsInChat = false, 
+  enableEvaluation = false, 
+  groundTruthAnswer = '',
+  filterOptions: {
+    specialty?: string;
+    documentType?: string;
+    userRole?: string;
+    resource?: string;
+    department?: string;
+    document_type?: string;
+    priority?: string;
+    date_range?: string;
+  } = {},
+  contextOptions: {
+    snippetSize?: number;
+    topK?: number;
+  } = {},
+  temperature = 0.3,
+  includeHighlights = true,
+  includeMessageHistory = false
+) {
   // Create an initial stream, which we'll populate with events from the Pinecone Assistant API
   const stream = createStreamableValue()
 
@@ -23,17 +46,65 @@ export async function chat(messages: Message[], showCitationsInChat = false) {
   console.log('Messages:', JSON.stringify(messages, null, 2));
   
   try {
+    // Build request body with all new features
+    const requestBody: any = {
+      model: 'gpt-4o',
+      messages: includeMessageHistory ? messages : [messages[messages.length - 1]], // Only send last message unless history is requested
+      stream: false,
+      temperature,
+      include_highlights: includeHighlights,
+    };
+
+    // Add context options if provided
+    if (contextOptions.snippetSize || contextOptions.topK) {
+      requestBody.context_options = {};
+      if (contextOptions.snippetSize) requestBody.context_options.snippet_size = contextOptions.snippetSize;
+      if (contextOptions.topK) requestBody.context_options.top_k = contextOptions.topK;
+    }
+
+    // Add metadata filtering if provided
+    const filters: any = {};
+    if (filterOptions.specialty) filters.specialty = filterOptions.specialty;
+    if (filterOptions.documentType) filters.document_type = filterOptions.documentType;
+    if (filterOptions.userRole) filters.user_role = filterOptions.userRole;
+    if (filterOptions.resource) filters.resource = filterOptions.resource;
+    
+    // Add new file metadata filters
+    if (filterOptions.department) filters.department = filterOptions.department;
+    if (filterOptions.document_type) filters.document_type = filterOptions.document_type;
+    if (filterOptions.priority) filters.priority = filterOptions.priority;
+    if (filterOptions.date_range) filters.date_range = filterOptions.date_range;
+    
+    // Auto-categorize based on filename patterns if no explicit filters
+    if (Object.keys(filters).length === 0 && messages.length > 0) {
+      const userMessage = messages[messages.length - 1].content.toLowerCase();
+      
+      // Auto-detect specialty from content
+      if (userMessage.includes('diagnostic') || userMessage.includes('test') || userMessage.includes('screening')) {
+        filters.resource = 'diagnostics';
+      } else if (userMessage.includes('private') || userMessage.includes('acute')) {
+        filters.resource = 'private_healthcare';
+      } else if (userMessage.includes('market') || userMessage.includes('business')) {
+        filters.resource = 'market_analysis';
+      } else if (userMessage.includes('digital') || userMessage.includes('technology')) {
+        filters.resource = 'digital_health';
+      }
+    }
+    
+    if (Object.keys(filters).length > 0) {
+      requestBody.filter = filters;
+    }
+
+    console.log('Request body with filters and options:', JSON.stringify(requestBody, null, 2));
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.PINECONE_API_KEY}`,
         'Content-Type': 'application/json',
+        'X-Pinecone-API-Version': '2025-04', // Use latest API version for new features
       },
-      body: JSON.stringify({
-        model: 'gpt-4o', // Default model for Pinecone Assistant
-        messages,
-        stream: false, // Let's test non-streaming first
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     console.log('Response status:', response.status);
@@ -107,6 +178,30 @@ export async function chat(messages: Message[], showCitationsInChat = false) {
     
     console.log('Final extracted scores:', scores);
     
+    // Get context snippets for additional relevance scores
+    let contextData = null;
+    if (messages.length > 0) {
+      const lastUserMessage = messages[messages.length - 1];
+      if (lastUserMessage.role === 'user') {
+        contextData = await getContextSnippets(lastUserMessage.content, process.env.PINECONE_ASSISTANT_NAME || '');
+        console.log('Context snippets with scores:', contextData);
+      }
+    }
+    
+    // Perform evaluation if enabled and ground truth is provided
+    let evaluationData: EvaluationResponse | null = null;
+    if (enableEvaluation && groundTruthAnswer && content && messages.length > 0) {
+      const lastUserMessage = messages[messages.length - 1];
+      if (lastUserMessage.role === 'user') {
+        evaluationData = await evaluateAnswer(
+          lastUserMessage.content,
+          content,
+          groundTruthAnswer
+        );
+        console.log('Evaluation results:', evaluationData);
+      }
+    }
+    
     if (content) {
       let finalContent = content;
       
@@ -136,7 +231,16 @@ export async function chat(messages: Message[], showCitationsInChat = false) {
           model,
           usage,
           citations,
-          scores
+          scores,
+          contextData,
+          evaluationData,
+          highlights: data.citations?.map((citation: any) => citation.references?.map((ref: any) => ref.highlight)).flat().filter(Boolean),
+          requestParams: {
+            temperature,
+            filterOptions,
+            contextOptions,
+            includeHighlights
+          }
         }
       };
       stream.update(JSON.stringify(streamChunk));

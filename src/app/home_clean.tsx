@@ -11,7 +11,6 @@ import Image from 'next/image';
 import AssistantFiles from './components/AssistantFiles';
 import AvailableModels from './components/AvailableModels';
 import ModernRightPanel from './components/ModernRightPanel';
-import SmartQueryHelper from './components/SmartQueryHelper';
 import { File, Reference, Message } from './types';
 import { v4 as uuidv4 } from 'uuid'; 
 
@@ -140,15 +139,14 @@ export default function Home({ initialShowAssistantFiles, isAssistantAvailable }
 
     try {
       const { object } = await chat(
-        includeMessageHistory ? messages.concat(newUserMessage) : [newUserMessage], 
+        [newUserMessage], 
         showCitationsInChat, 
         enableEvaluation, 
         groundTruthAnswer,
         filterOptions,
         contextOptions,
         temperature,
-        includeHighlights,
-        includeMessageHistory
+        includeHighlights
       );
       let accumulatedContent = '';
       const newAssistantMessage: Message = {
@@ -367,12 +365,6 @@ export default function Home({ initialShowAssistantFiles, isAssistantAvailable }
           <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6">
             <form onSubmit={handleChat} className="flex space-x-4">
               <div className="flex-1 relative">
-                {/* Smart Query Helper */}
-                <SmartQueryHelper 
-                  onSuggestionClick={(suggestion) => setInput(suggestion)}
-                  input={input}
-                />
-                
                 <input
                   type="text"
                   value={input}
